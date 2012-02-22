@@ -19,20 +19,20 @@
   Backbone.Mediator = (function() {
     var director;
     return {
-      register: function(d, opts) {
+      register: function(d) {
         director = d;
-
-        // todo: opts
       },
 
       propagate: function(handler, context, e) {
         if(!director) throw "Backbone.Mediator: no Director registered";
 
-        var args = [], mediator;
+        var
+          args = [],
+          mediator;
 
-        if(_.isString(handler) && e) {
-          args = [e];
-        } else if(_.isArray(handler)) {
+        if(_.isString(handler)) {
+          args = e ? [e] : e;
+        } else if(_.isArray(handler) && _.isFunction(handler[1])) {
           args = handler[1].call(context, e);
           handler = handler[0];
         } else {
@@ -50,6 +50,7 @@
         }
       },
 
+      // todo: not tested
       propagateDirect: function(name, handler, context) {
         var formatted = _.isFunction(handler) ? [name, handler] : name;
         this.propagate(formatted, context);
@@ -57,6 +58,9 @@
     };
   })();
 
+  /**
+   * Director
+   */
   Backbone.Director = function() {
     this.initialize.apply(this, arguments);
   };
@@ -64,15 +68,33 @@
     handlers: {},
     initialize: function() {}
   });
-  Backbone.Director.extend = Backbone.View.extend;
 
-  var delegateEvents = Backbone.View.prototype.delegateEvents;
+  Backbone.Director.extend = Backbone.Mediator.extend = Backbone.View.extend;
 
-  Backbone.View.prototype.delegateEvents = function(events) {
-    // call "super"
-    delegateEvents.call(this, events);
 
-    var bindMediated = function() {
+  /**
+   * MediatedView
+   */
+  Backbone.MediatedView = Backbone.View.extend({
+    delegateEvents: function(events) {
+      var
+        _super = Backbone.View.prototype.delegateEvents,
+        _undelegateEvents = Backbone.View.prototype.undelegateEvents;
+
+      // delegate normal backbone events
+      _super.call(this, events);
+
+      if(!this.mediated) return;
+
+      // Hack to be able to reuse super::delegateEvent to bind mediated. The parent method calls
+      // undelegateEvents, so in order to reuse it without unsetting the normal events, temporarily
+      // make it an empty function.
+      Backbone.View.prototype.undelegateEvents = function() {};
+      _super.call(this, this.wrapMediated());
+      Backbone.View.prototype.undelegateEvents = _undelegateEvents;
+    },
+
+    wrapMediated: function() {
       if(!this.mediated) return;
 
       var
@@ -88,19 +110,39 @@
         })(this.mediated[key]);
       }
 
-      delegateEvents.call(this, wrapped);
-    };
+      return wrapped;
+    },
 
-    //zomg hack
-    var undelegateEvents = Backbone.View.prototype.undelegateEvents;
-    Backbone.View.prototype.undelegateEvents = function() {};
-    bindMediated.call(this);
-    Backbone.View.prototype.undelegateEvents = undelegateEvents;
-  };
+    mediate: function(name, handler) {
+      Backbone.Mediator.propagateDirect(name, handler, this);
+    }
+  });
 
-  Backbone.View.prototype.mediate = function(name, handler) {
-    Backbone.Mediator.propagateDirect(name, handler, this);
-  };
+
+  /**
+   * MediatedRouter
+   */
+  Backbone.MediatedRouter = Backbone.Router.extend({
+    _bindRoutes: function() {
+      // call super
+      Backbone.Router.prototype._bindRoutes.call(this);
+
+      Backbone.history || (Backbone.history = new Backbone.History());
+
+      _.each(this.mediated, function(name, route) {
+        if (!_.isRegExp(route)) route = this._routeToRegExp(route);
+
+        Backbone.history.route(route, _.bind(function(fragment) {
+          var args = this._extractParameters(route, fragment);
+
+          Backbone.Mediator.propagateDirect(name, function() {
+            return args;
+          });
+
+          Backbone.history.trigger('route', this, name, args);
+        }, this));
+      }, this);
+    }
+  });
+
 }).call(this);
-
-
