@@ -60,7 +60,7 @@ var myDirector = Backbone.Director.extend({
     },
 
     'router:view': function(id) {
-      myView.view(id);
+      myView.showDetails(id);
     }
   }
 });
