@@ -1,7 +1,7 @@
 /**
  * backbone.mediator.js
  *
- * Copyright 2012 Aaron Hall
+ * (c) 2012 Aaron Hall
  * This code may be freely distributed under the MIT license.
  */
 (function() {
