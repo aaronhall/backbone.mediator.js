@@ -12,7 +12,7 @@
     root = this,
     _ = root._;
 
-  if (!_ && (typeof require !== 'undefined')) _ = require('underscore', 'backbone');
+  if (!_ && (typeof require !== 'undefined')) _ = require('underscore');
 
 
   // todo: should extend Backbone.Events
@@ -23,37 +23,47 @@
         director = d;
       },
 
-      propagate: function(handler, context, e) {
-        if(!director) throw "Backbone.Mediator: no Director registered";
+      signal: function(handler_def, context, e) {
+        if(!director) throw new Error("No director registered");
+        if(!context) throw new Error("No context provided registered");
 
         var
+          do_mediate = true,
+          handler_name,
           args = [],
           mediator;
 
-        if(_.isString(handler)) {
-          args = e ? [e] : e;
-        } else if(_.isArray(handler) && _.isFunction(handler[1])) {
-          args = handler[1].call(context, e);
-          handler = handler[0];
+        if(_.isString(handler_def)) {
+          handler_name = handler_def;
+          args = e ? [e] : [];
+        } else if(_.isArray(handler_def) && _.isFunction(handler_def[1])) {
+          handler_name = handler_def[0];
+          args = handler_def[1].call(context, e);
+        } else if(_.isObject(handler_def) && handler_def.name && handler_def.args) {
+          handler_name = handler_def.name;
+          if(_.isFunction(handler_def.args)) {
+            args = handler_def.args.call(context, e);
+          } else {
+            args = handler_def.args;
+          }
+        } else if(_.isFunction(handler_def)) {
+          do_mediate = false;
         } else {
-          throw 'Invalid handler structure (must be string or [string, function])';
+          throw 'Invalid handler definition (must be string or [string, function] or hashmap or function)';
         }
 
-        mediator = director.handlers[handler];
+        if(do_mediate) {
+          mediator = director.getHandler(handler_name);
+          if(!mediator) throw 'No handler in Director for "'+handler_def+'"';
 
-        if(!director.handlers[handler]) throw 'No handler in Director for "'+handler+'"';
-
-        if(_.isArray(args)) {
-          mediator.apply(director, args);
+          if(_.isArray(args)) {
+            mediator.apply(director, args);
+          } else {
+            mediator.call(director, args);
+          }
         } else {
-          mediator.call(director, args);
+          handler_def.call(context, e);
         }
-      },
-
-      // todo: not tested
-      propagateDirect: function(name, handler, context) {
-        var formatted = _.isFunction(handler) ? [name, handler] : name;
-        this.propagate(formatted, context);
       }
     };
   })();
@@ -66,9 +76,16 @@
   };
   _.extend(Backbone.Director.prototype, Backbone.Events, {
     handlers: {},
-    initialize: function() {}
-  });
+    initialize: function() {},
 
+    getHandler: function(name) {
+      return this.handlers[name];
+    },
+
+    addHandlers: function(handlers) {
+      this.handlers = _.extend(this.handlers, handlers);
+    }
+  });
   Backbone.Director.extend = Backbone.Mediator.extend = Backbone.View.extend;
 
 
@@ -76,36 +93,51 @@
    * MediatedView
    */
   Backbone.MediatedView = Backbone.View.extend({
-    delegateEvents: function(events) {
-      var
-        _super = Backbone.View.prototype.delegateEvents,
-        _undelegateEvents = Backbone.View.prototype.undelegateEvents;
-
-      // delegate normal backbone events
-      _super.call(this, events);
-
-      if(!this.mediated) return;
-
-      // Hack to be able to reuse super::delegateEvent to bind mediated. The parent method calls
-      // undelegateEvents, so in order to reuse it without unsetting the normal events, temporarily
-      // make it an empty function.
-      Backbone.View.prototype.undelegateEvents = function() {};
-      _super.call(this, this.wrapMediated());
-      Backbone.View.prototype.undelegateEvents = _undelegateEvents;
+    constructor: function(options) {
+      Backbone.View.call(this, options); // todo: make this isn't already called
+      this.delegateMediated();
     },
 
-    wrapMediated: function() {
-      if(!this.mediated) return;
+    delegateMediated: function(events) {
+      var
+        eventSplitter = /^(\S+)\s*(.*)$/;
 
+      if (!(events || (events = this._transformMediated()))) return;
+      this.undelegateMediated();
+      for (var key in events) {
+        var method = events[key];
+        var match = key.match(eventSplitter);
+        var eventName = match[1], selector = match[2];
+        method = _.bind(method, this);
+        eventName += '.delegateMediated' + this.cid;
+        if (selector === '') {
+          this.$el.bind(eventName, method);
+        } else {
+          this.$el.delegate(selector, eventName, method);
+        }
+      }
+    },
+
+    undelegateMediated: function() {
+      this.$el.unbind('.delegateMediated' + this.cid);
+    },
+
+    /**
+     * Transform each handler definition in this.mediated into a `signal` call to Backbone.Mediator.
+     *
+     * @return Hash of event names to functions that can be passed directly into Backbone.View.delegateEvents
+     */
+    _transformMediated: function() {
       var
         key,
         eventSplitter = /^(\S+)\s*(.*)$/,
         wrapped = {};
 
       for(key in this.mediated) {
-        wrapped[key] = (function(handler) {
+        wrapped[key] = (function(handler_def) {
           return function(e) {
-            Backbone.Mediator.propagate(handler, this, e);
+            // `this` is this MediatedView instance
+            Backbone.Mediator.signal(handler_def, this, e);
           };
         })(this.mediated[key]);
       }
@@ -135,9 +167,10 @@
         Backbone.history.route(route, _.bind(function(fragment) {
           var args = this._extractParameters(route, fragment);
 
-          Backbone.Mediator.propagateDirect(name, function() {
-            return args;
-          });
+          Backbone.Mediator.signal({
+            'name': name,
+            'args': args
+          }, this);
 
           Backbone.history.trigger('route', this, name, args);
         }, this));
