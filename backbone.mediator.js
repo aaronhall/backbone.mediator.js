@@ -1,7 +1,6 @@
 /**
  * backbone.mediator.js
  *
- * (c) 2012 Aaron Hall
  * This code may be freely distributed under the MIT license.
  */
 (function() {
@@ -12,7 +11,7 @@
     root = this,
     _ = root._;
 
-  if (!_ && (typeof require !== 'undefined')) _ = require('underscore');
+  if (!_ && (typeof require !== 'undefined')) _ = require('underscore', 'backbone');
 
 
   // todo: should extend Backbone.Events
