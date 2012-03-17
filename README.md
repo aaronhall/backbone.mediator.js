@@ -1,4 +1,4 @@
-Backbone.mediator.js is provides an implementation of the Mediator pattern for backbone.js. It is meant to replace or accompany Backbone's Observer pattern implementation (Backbone.View.events / Backbone.Events).
+**Backbone.mediator.js** is an extension of Backbone.js that provides an implementation of the Mediator pattern for backbone.js. It can replace or accompany Backbone's Observer pattern implementation (Backbone.View.events / Backbone.Events).
 
 ## Mediator pattern
 
@@ -22,6 +22,7 @@ Backbone.mediator.js provides:
 
 ## Examples
 
+<a name="director"></a>
 ### Backbone.Director
 
 ```javascript
@@ -37,8 +38,9 @@ var AppDirector = Backbone.Director.extend({
   }
 });
 
-// first parameter here is arbitrary, but should be unique across all Directors (if you choose to use)
-// more than one). If the name is already registered, the old Director is detached and replaced by the new one.
+// first parameter here is arbitrary, but should be unique across all
+// Directors (if you choose to use more than one). If the name is already
+// registered, the old Director is unregistered and replaced by the new one.
 Backbone.Mediator.register('main', new AppDirector());
 ```
 
@@ -59,7 +61,7 @@ var myList = new List();
 
 ### Backbone.MediatedRouter
 ```javascript
-var Router = Backbone.MediatedRouter.extend({
+var AppRouter = Backbone.MediatedRouter.extend({
   mediated: {
     'item/:item_id': 'router:loadItem'
   },
@@ -67,6 +69,9 @@ var Router = Backbone.MediatedRouter.extend({
   // the routes property still behaves as normal
   routes: {}
 });
+
+myRouter = new AppRouter();
+Backbone.history.start();
 ```
 
 ## Definitions
