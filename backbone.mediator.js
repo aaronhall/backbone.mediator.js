@@ -45,7 +45,8 @@
         var
           do_mediate = true,
           handler_name,
-          args = [];
+          args = [],
+          key;
 
         if(_.isString(handler_def)) {
           handler_name = handler_def;
@@ -67,7 +68,7 @@
         }
 
         if(do_mediate) {
-          for(var key in directors) {
+          for(key in directors) {
             if(directors.hasOwnProperty(key)) {
               if(directors[key].hasHandler(handler_name)) {
                 if(_.isArray(args)) {
@@ -126,14 +127,17 @@
 
     delegateMediated: function(events) {
       var
-        eventSplitter = /^(\S+)\s*(.*)$/;
+        eventSplitter = /^(\S+)\s*(.*)$/,
+        key, method, match, eventName, selector;
 
       if (!(events || (events = this._transformMediated()))) return;
       this.undelegateMediated();
-      for (var key in events) {
-        var method = events[key];
-        var match = key.match(eventSplitter);
-        var eventName = match[1], selector = match[2];
+      for (key in events) {
+        method = events[key];
+        match = key.match(eventSplitter);
+        eventName = match[1];
+        selector = match[2];
+
         method = _.bind(method, this);
         eventName += '.delegateMediated' + this.cid;
         if (selector === '') {
@@ -209,10 +213,20 @@
     }
   });
 
+  // todo: this could be a bit better -- see README describing this
   Backbone.Director.prototype.mediate =
   Backbone.MediatedView.prototype.mediate =
   Backbone.MediatedRouter.prototype.mediate = function(handler_def, e) {
     Backbone.Mediator.signal(handler_def, this, e);
+
+    /*
+    var
+      args = Array.prototype.slice.call(arguments), // args is real array
+      handler_args = [handler_def, this, args.slice(1)];
+
+
+    Backbone.Mediator.signal.apply(Backbone.Mediator, handler_args);
+    */
   };
 
 }).call(this);
