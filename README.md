@@ -15,42 +15,61 @@ Mediator prevents speghettiness by centralizing event handling. Some other benef
 Backbone.mediator.js provides:
 
 
-* **Backbone.Director**: Defines event handlers for named events
-* **Backbone.Mediator**: Holds directors and delegates events to the appropriate Director(s)
-* **Backbone.MediatedView**: extends Backbone.View and consumes the `mediated` property (similar to the `events` property; defined below). Events defined in `mediated` are automatically connected to the appropriate Director (via Mediator) when the view is initailized.
-* **Backbone.MediatedRouter**: extend Backbone.Router and consumes the `mediated` property (similar to the `routes` property; defined below). Events defined in `mediated` are automatically connected to the appropriate Director (via Mediator) when the router is initailized.
+* **[Backbone.Director](#director)**: Defines event handlers for named events defined in MediatedView's `mediated` map.
+* **[Backbone.Mediator](#mediator)**: Holds directors and delegates events to the appropriate Director(s)
+* **[Backbone.MediatedView](#mediatedview)**: extends Backbone.View and consumes the `mediated` property (similar to the `events` property; defined below). Events defined in `mediated` are automatically connected to the appropriate Director (via Mediator) when the view is initailized.
+* **[Backbone.MediatedRouter](#mediatedrouter)**: extend Backbone.Router and consumes the `mediated` property (similar to the `routes` property; defined below). Events defined in `mediated` are automatically connected to the appropriate Director (via Mediator) when the router is initailized.
 
 ## Examples
 
 <a name="director"></a>
 ### Backbone.Director
 
+This director handlers a router event and a view event by name. The `handlers` keys are arbitrary strings; the 'colon' separators are just convention.
+
+Handlers that handle route events are passed the route-defined URL parameters in the order they appear in the path definition.
+
 ```javascript
 var AppDirector = Backbone.Director.extend({
   handlers: {
     'router:loadItem': function(itemID) {
-      // handle the route event
+      // `this` is AppDirector instance
+      this.loadItem(itemID);
     },
     
     'myList:itemClicked': function(e, $target) {
       // do things when a list item is clicked
     }
+  },
+  
+  loadItem: function(itemID) {
+    //...
   }
 });
 
-// first parameter here is arbitrary, but should be unique across all
-// Directors (if you choose to use more than one). If the name is already
-// registered, the old Director is unregistered and replaced by the new one.
+```
+
+<a name="mediator"></a>
+### Backbone.Mediator
+
+Interact with the Backbone.Mediator object to register/unregister directors. The first argument for `register` is a named key for the Director that can be used to unregister the Director later. If a Director by that name has already been registered, the existing one is unregistered and replaced by the one provided.
+
+```
 Backbone.Mediator.register('main', new AppDirector());
 ```
 
+You can add/remove directors at runtime as needed. If multiple directors implement handlers for the same named event, both will be called in the order they were regsitered.
 
+<a name="mediatedview"></a>
 ### Backbone.MediatedView
+
+In this example, the 'myList:itemClicked' handler in AppDirector will be passed the event object and $(event.target) (or just event.target when jQuery/Zepto/ender aren't available) when a `ul#list li a` element is clicked:
 
 ```javascript
 var List = Backbone.MediatedView.extend({
+  el: 'ul#list',
   mediated: {
-    'click li a': 'myList:itemClicked' // director will be passed the click event and $(e.target) (or just e.target in absense of JQuery/Zepto/ender)
+    'click li a': 'myList:itemClicked'
   },
   
   // the events property still behaves as normal
@@ -59,6 +78,24 @@ var List = Backbone.MediatedView.extend({
 var myList = new List();
 ```
 
+It's also possible to define the parameters that are passed to the Director handlers. Here, the handler for 'myList:itemClicked' would receive two arguments:
+
+```
+mediated: {
+  'click li a': ['myList:itemClicked', function(e, $target) {
+    // `this` variable is the MediatedView instance
+    
+    // return an array of arguments to be passed to handler in order
+    return [this.someLocalStateVariable, $target.attr('data-item-id')];
+  }],
+  
+  //...
+}
+```
+
+
+
+<a name="mediatedrouter"></a>
 ### Backbone.MediatedRouter
 ```javascript
 var AppRouter = Backbone.MediatedRouter.extend({
