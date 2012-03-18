@@ -1,22 +1,21 @@
-**Backbone.mediator.js** is an extension of Backbone.js that provides an implementation of the Mediator pattern for backbone.js. It can replace or accompany Backbone's Observer pattern implementation (Backbone.View.events / Backbone.Events).
+**Backbone.mediator.js** is a Backbone.js extension that implements the [Mediator pattern](http://en.wikipedia.org/wiki/Mediator_pattern). It can replace or accompany Backbone's Observer pattern implementation (Backbone.View.events / Backbone.Events).
 
-## Mediator pattern
+### Mediator pattern
 
-From [GoF](http://en.wikipedia.org/wiki/Design_Patterns): "Define an object that encapsulates how a set of objects interact. **Mediator promotes loose coupling by keeping objects from referring to each other explicitly, and it lets you vary their interaction independently.**" (more at [Wikipedia](http://en.wikipedia.org/wiki/Mediator_pattern))
+From [GoF](http://en.wikipedia.org/wiki/Design_Patterns): "Define an object that encapsulates how a set of objects interact. **Mediator promotes loose coupling by keeping objects from referring to each other explicitly, and it lets you vary their interaction independently.**"
 
-Mediator prevents speghettiness by centralizing event handling. Some other benefits:
+Mediator prevents code spaghettification by centralizing event handling. Some other benefits:
 
-* Handler definition is in one place as opposed to being scattered across different views.
-* Promotes loose coupling of views.
-* Allows for predictable ordering in event handlers, whereas Observer's event delegation is done on a first attached, first served basis.
+* Handler definition is in one place as instead of being scattered across different views.
+* Promotes loose coupling. Views have no knowledge of other views' events.
+* Allows for predictable ordering in event handlers whereas Observer's event delegation is done on a first attached, first served basis.
 
 ## Overview
 
 Backbone.mediator.js provides:
 
-
-* **[Backbone.Director](#director)**: Defines event handlers for named events defined in MediatedView's `mediated` map.
-* **[Backbone.Mediator](#mediator)**: Holds directors and delegates events to the appropriate Director(s)
+* **[Backbone.Director](#director)**: defines event handlers for named events defined in MediatedView's `mediated` map.
+* **[Backbone.Mediator](#mediator)**: holds Directors and delegates events to the appropriate Director(s)
 * **[Backbone.MediatedView](#mediatedview)**: extends Backbone.View and consumes the `mediated` property (similar to the `events` property; defined below). Events defined in `mediated` are automatically connected to the appropriate Director (via Mediator) when the view is initailized.
 * **[Backbone.MediatedRouter](#mediatedrouter)**: extend Backbone.Router and consumes the `mediated` property (similar to the `routes` property; defined below). Events defined in `mediated` are automatically connected to the appropriate Director (via Mediator) when the router is initailized.
 
@@ -40,7 +39,7 @@ var AppDirector = Backbone.Director.extend({
     'myList:itemClicked': function(e, $target) {
       this.loadItem($target.attr('data-item-id'));
     }
-  },
+
 
   loadItem: function(itemID) {
     //...
@@ -79,7 +78,7 @@ var List = Backbone.MediatedView.extend({
 var myList = new List();
 ```
 
-The value of a `mediated` key can be in a few different formats. Which you use depends on your style preference and what arguments you want passed to the Director. Below, the List view illustrates the different formats. Every function below will have `this` set to the view instance when called.
+The value of a `mediated` key can be in a few different formats. Which you use depends on your style preference and what arguments you want passed to the Director. The List view below illustrates the different formats. Every function below will have `this` set to the view instance when called.
 
 ```javascript
 var List = Backbone.MediatedView.extend({
@@ -113,7 +112,7 @@ var List = Backbone.MediatedView.extend({
 
 Similar to the `routes` property, `mediated` maps URL path definitions to event names.
 
-The handler for `router:loadItem` will receive the `:item_id` as its only argument.
+The handler for `router:loadItem` will receive the value of `:item_id` as its only argument.
 
 ```javascript
 var AppRouter = Backbone.MediatedRouter.extend({
