@@ -36,18 +36,19 @@ var AppDirector = Backbone.Director.extend({
       // `this` is AppDirector instance
       this.loadItem(itemID);
     },
-    
+
     'myList:itemClicked': function(e, $target) {
-      // do things when a list item is clicked
+      this.loadItem($target.attr('data-item-id'));
     }
   },
-  
+
   loadItem: function(itemID) {
     //...
   }
 });
-
 ```
+
+It's safe to add/remove handlers from registered Dirtectors at runtime since lookups are performed when the event is triggered.
 
 <a name="mediator"></a>
 ### Backbone.Mediator
@@ -58,12 +59,12 @@ Interact with the Backbone.Mediator object to register/unregister directors. The
 Backbone.Mediator.register('main', new AppDirector());
 ```
 
-You can add/remove directors at runtime as needed. If multiple directors implement handlers for the same named event, both will be called in the order they were regsitered.
+You can add/remove directors at runtime as needed. If multiple directors implement handlers for the same named event, both will be called in the order they were registered.
 
 <a name="mediatedview"></a>
 ### Backbone.MediatedView
 
-In this example, the 'myList:itemClicked' handler in AppDirector will be passed the event object and $(event.target) (or just event.target when jQuery/Zepto/ender aren't available) when a `ul#list li a` element is clicked:
+In this example, the `myList:itemClicked` handler in AppDirector will be passed the event object and $(event.target) (or just event.target when jQuery/Zepto/ender aren't available) when a `ul#list li a` element is clicked:
 
 ```javascript
 var List = Backbone.MediatedView.extend({
@@ -71,38 +72,57 @@ var List = Backbone.MediatedView.extend({
   mediated: {
     'click li a': 'myList:itemClicked'
   },
-  
+
   // the events property still behaves as normal
   events: {}
 });
 var myList = new List();
 ```
 
-It's also possible to define the parameters that are passed to the Director handlers. Here, the handler for 'myList:itemClicked' would receive two arguments:
+The value of a `mediated` key can be in a few different formats. Which you use depends on your style preference and what arguments you want passed to the Director. Below, the List view illustrates the different formats. Every function below will have `this` set to the view instance when called.
 
-```
-mediated: {
-  'click li a': ['myList:itemClicked', function(e, $target) {
-    // `this` variable is the MediatedView instance
-    
-    // return an array of arguments to be passed to handler in order
-    return [this.someLocalStateVariable, $target.attr('data-item-id')];
-  }],
-  
-  //...
-}
-```
+```javascript
+var List = Backbone.MediatedView.extend({
+  mediated: {
+    // handler receives (e, $(e.target))
+    'click li a.one': 'myList:itemClicked',
 
+    // handler receives ('foo', 'bar')
+    'click li a.two': ['myList:itemClicked', function(e, $target) {
+      return ['foo', 'bar']; // a non-array value would be passed as a single arg
+    },
 
+    // handler receives single arg ('foo')
+    'click li a.three': {
+      name: 'myList:itemClicked',
+      args: function(e, $target) {
+        return 'foo'; // could also be an array to pass multiple args
+      }
+    },
+
+    // here, the function must call mediate itself
+    'click li a.four': function(e, $target) {
+      this.mediate('myList:itemClicked', e);
+    }
+  },
+
+  // the events property still behaves as normal
+  events: {}
+});
 
 <a name="mediatedrouter"></a>
 ### Backbone.MediatedRouter
+
+Similar to the `routes` property, `mediated` maps URL path definitions to event names.
+
+The handler for `router:loadItem` will receive the `:item_id` as its only argument.
+
 ```javascript
 var AppRouter = Backbone.MediatedRouter.extend({
   mediated: {
     'item/:item_id': 'router:loadItem'
   },
-  
+
   // the routes property still behaves as normal
   routes: {}
 });
@@ -110,18 +130,3 @@ var AppRouter = Backbone.MediatedRouter.extend({
 myRouter = new AppRouter();
 Backbone.history.start();
 ```
-
-## Definitions
-
-### `Backbone.MediatedView.mediated`
-
-### `Backbone.MediatedRouter.mediated`
-
-### `Backbone.Director.handlers`
-
-
-## Other stuff
-
-* When multiple directors are attached...
-* Director handler lookups are done 'just in time' when the event is triggered. It's safe to augment handlers at runtime via `addHandlers()`.
-* Backbone.MediatedView also provides `undelegateMediated` (like `undelegateEvents`) and `undelegateAll` which calls both undelegate methods.
