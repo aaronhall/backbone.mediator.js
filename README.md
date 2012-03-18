@@ -104,11 +104,9 @@ var List = Backbone.MediatedView.extend({
     'click li a.four': function(e, $target) {
       this.mediate('myList:itemClicked', e);
     }
-  },
-
-  // the events property still behaves as normal
-  events: {}
+  }
 });
+```
 
 <a name="mediatedrouter"></a>
 ### Backbone.MediatedRouter
