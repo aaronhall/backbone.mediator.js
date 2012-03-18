@@ -11,26 +11,41 @@
     root = this,
     _ = root._;
 
-  if (!_ && (typeof require !== 'undefined')) _ = require('underscore', 'backbone');
+  if (!_ && (typeof require !== 'undefined')) _ = require('underscore');
 
 
   // todo: should extend Backbone.Events
   Backbone.Mediator = (function() {
-    var director;
+    var
+      directors = {};
+
     return {
-      register: function(d) {
-        director = d;
+      register: function(key, director) {
+        if(_.isString(key) === false && _.isObject(director) === true) {
+          director = key;
+          key = 'default';
+        }
+
+        if(directors[key]) {
+          this.unregister(key);
+        }
+
+        directors[key] = director;
+      },
+
+      unregister: function(key) {
+        directors[key].teardown();
+        delete directors[key];
       },
 
       signal: function(handler_def, context, e) {
-        if(!director) throw new Error("No director registered");
-        if(!context) throw new Error("No context provided registered");
+        if(!context) throw new Error("No context provided");
+
 
         var
           do_mediate = true,
           handler_name,
-          args = [],
-          mediator;
+          args = [];
 
         if(_.isString(handler_def)) {
           handler_name = handler_def;
@@ -52,13 +67,16 @@
         }
 
         if(do_mediate) {
-          mediator = director.getHandler(handler_name);
-          if(!mediator) throw 'No handler in Director for "'+handler_def+'"';
-
-          if(_.isArray(args)) {
-            mediator.apply(director, args);
-          } else {
-            mediator.call(director, args);
+          for(var key in directors) {
+            if(directors.hasOwnProperty(key)) {
+              if(directors[key].hasHandler(handler_name)) {
+                if(_.isArray(args)) {
+                  directors[key].getHandler(handler_name).apply(directors[key], args);
+                } else {
+                  directors[key].getHandler(handler_name).call(directors[key], args);
+                }
+              }
+            }
           }
         } else {
           handler_def.call(context, e);
@@ -81,9 +99,18 @@
       return this.handlers[name];
     },
 
+    hasHandler: function(name) {
+      return this.handlers[name] !== undefined;
+    },
+
     addHandlers: function(handlers) {
       this.handlers = _.extend(this.handlers, handlers);
-    }
+    },
+
+    /**
+     * Called when this director is replaced with another in Backbone.Mediator. Noop by default.
+     */
+    teardown: function() {}
   });
   Backbone.Director.extend = Backbone.Mediator.extend = Backbone.View.extend;
 
@@ -144,9 +171,14 @@
       return wrapped;
     },
 
-    mediate: function(name, handler) {
-      Backbone.Mediator.propagateDirect(name, handler, this);
+    undelegateAll: function() {
+      this.undelegateEvents();
+      this.undelegateMediated();
+
+      return this;
     }
+
+    // TODO: need to override setElement to call this.delegateMediated
   });
 
 
@@ -176,5 +208,11 @@
       }, this);
     }
   });
+
+  Backbone.Director.prototype.mediate =
+  Backbone.MediatedView.prototype.mediate =
+  Backbone.MediatedRouter.prototype.mediate = function(handler_def, e) {
+    Backbone.Mediator.signal(handler_def, this, e);
+  };
 
 }).call(this);
