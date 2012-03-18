@@ -41,7 +41,6 @@
       signal: function(handler_def, context, e) {
         if(!context) throw new Error("No context provided");
 
-
         var
           do_mediate = true,
           handler_name,
@@ -50,7 +49,7 @@
 
         if(_.isString(handler_def)) {
           handler_name = handler_def;
-          args = e ? [e] : [];
+          args = e ? [e, $(e.target)] : [];
         } else if(_.isArray(handler_def) && _.isFunction(handler_def[1])) {
           handler_name = handler_def[0];
           args = handler_def[1].call(context, e);
