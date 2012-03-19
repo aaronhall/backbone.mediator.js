@@ -4,20 +4,16 @@
 
 From [GoF](http://en.wikipedia.org/wiki/Design_Patterns): "Define an object that encapsulates how a set of objects interact. **Mediator promotes loose coupling by keeping objects from referring to each other explicitly, and it lets you vary their interaction independently.**"
 
-Mediator prevents code spaghettification by centralizing event handling. Some other benefits:
-
-* Handler definition is in one place as instead of being scattered across different views.
-* Promotes loose coupling. Views have no knowledge of other views' events.
-* Allows for predictable ordering in event handlers whereas Observer's event delegation is done on a first attached, first served basis.
+Mediator promotes maintainability and loose coupling for complex event-driven applications. Event handlers are defined by a single object and decouple views by eliminating the requirement that they have knowledge of events in other views. Code paths are readable and more predictable, and events that affect multiple views in complex and interdependent ways stay manageable.
 
 ## Overview
 
-Backbone.mediator.js provides:
+Backbone.mediator.js provides four new objects/prototypes in the Backbone global:
 
-* **[Backbone.Director](#director)**: defines event handlers for named events defined in MediatedView's `mediated` map.
-* **[Backbone.Mediator](#mediator)**: holds Directors and delegates events to the appropriate Director(s)
-* **[Backbone.MediatedView](#mediatedview)**: extends Backbone.View and consumes the `mediated` property (similar to the `events` property; defined below). Events defined in `mediated` are automatically connected to the appropriate Director (via Mediator) when the view is initailized.
-* **[Backbone.MediatedRouter](#mediatedrouter)**: extend Backbone.Router and consumes the `mediated` property (similar to the `routes` property; defined below). Events defined in `mediated` are automatically connected to the appropriate Director (via Mediator) when the router is initailized.
+* **[Backbone.Director](#director)**: One or more Director instances are registered to Backbone.Mediator and define the event handlers for all MediatedView and MediatedRouter instances.
+* **[Backbone.Mediator](#mediator)**: Routes events that are triggered from any MediatedView or MediatedRouter instance to handlers defined in the registered Director(s).
+* **[Backbone.MediatedView](#mediatedview)**: Extends Backbone.View and supports a property called `mediated` that defines events similarly to `View.events`.
+* **[Backbone.MediatedRouter](#mediatedrouter)**: Extend Backbone.Router and also supports a property called `mediated` that defines routes similarly to Router.routes.
 
 ## Examples
 
