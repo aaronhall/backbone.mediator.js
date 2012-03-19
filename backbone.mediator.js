@@ -170,6 +170,14 @@
     // Called when the director is instantiated
     initialize: function() {},
 
+    getHandler: function(key) {
+      return this.handlers[key];
+    },
+
+    hasHandler: function(key) {
+      return this.handlers[key] !== undefined;
+    },
+
     // Augment handlers to this director instance. `handlers` should be in the same format as `this.handlers`. It is completely
     // safe to add/remove handlers from registered directors at runtime.
     addHandlers: function(handlers) {
