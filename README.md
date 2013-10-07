@@ -20,7 +20,7 @@ Backbone.mediator.js provides four new objects/prototypes in the Backbone global
 <a name="director"></a>
 ### Backbone.Director
 
-This director handlers a router event and a view event by name. The `handlers` keys are arbitrary strings; the 'colon' separators are just convention.
+This director handles a router event and a view event by name. The `handlers` keys are arbitrary strings; the 'colon' separators are just convention.
 
 Handlers that handle route events are passed the route-defined URL parameters in the order they appear in the path definition.
 
